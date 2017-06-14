@@ -144,29 +144,10 @@ for recipient in config.getRecipients():
   content_root = generator.getroot(days_left)
 
   """ Generating user rules reminder """
-
-  """ Activated rules for this sending
-  # Create a set for comparison
-  """
-  print( "User rules:\n  {}".format( config.users[0]['condition_set'] ))
-  print( "Matching rules:\n  {}".format( recipient[1] ))
-  """
-  for name, rule in recipient[1]:
-    if name == 'due-date':
-      generator.set_value( content_root, '/sending-rules/due-date', rule )
-    elif name == 'weekday':
-      day = Weekdays[rule]
-      generator.set_value( content_root, '/sending-rules/day', day )
-    elif name == 'list-change':
-      generator.set_value( '/sending-rules/list-change/@value', 'true')
-  """
-
   # All rules
   ct_rules = generator.set_value( content_root, './sending-rules' )
 
-  print( "Parsed rules for display:" )
   for name, rule in [x['sending-rules'] for x in config.users if x['mail'] == recipient[0]][0].items():
-    print( "  [{}, {}]".format( name, rule ))
     if name == 'list-change' and rule == True:
       ct_rule_change = generator.new_value( ct_rules, './list-change', None )
       if config.rule_match(name, rule):
@@ -199,6 +180,10 @@ for recipient in config.getRecipients():
       continue
   
   content_root = generator.getroot(ct_rules)
+
+  xml_data = open( 'generated_content.xml', 'w' )
+  xml_data.write( etree.tostring( content_root, method='xml', pretty_print=True, encoding='unicode' ))
+  xml_data.close()
 
   msg = MIMEMultipart('alternative')
   msg.attach( MIMEText( etree.tostring( generator.transform( content_root, 'to_html.xsl' ), pretty_print=True, encoding='unicode' ), 'html' ))

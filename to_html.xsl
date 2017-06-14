@@ -11,7 +11,7 @@
     <div class="loans">
       <div>Pourquoi reçois-je ce message ?</div>
       <ul>
-        <xsl:apply-templates select="sending-rules/days-left[not(@value = following-sibling::days-left/@value)] | sending-rules/weekday[@value] | sending-rules/list-change[@value]"/>
+        <xsl:apply-templates select="sending-rules/days-left[@value and not(@value = following-sibling::days-left/@value)] | sending-rules/weekday[@value] | sending-rules/list-change[@value]"/>
       </ul>
     </div>
 

@@ -25,8 +25,6 @@ class ConfigurationManager:
     for name, rule in rules:
       new_rules = self.rule_modeling( name, rule )
       user['condition_set'] |= new_rules
-      print( "Added rules: {}".format( new_rules ))
-    print( "Full rules set: {}".format( user['condition_set'] ))
 
 
   def registerCondition(self, key, value ):
@@ -34,7 +32,6 @@ class ConfigurationManager:
 
 
   def rule_modeling(self, name, rule):
-    print( "Processing rule: ({}, {})".format(name, rule) )
     rules = set()
 
     if type( rule ) is list:
@@ -43,22 +40,17 @@ class ConfigurationManager:
         rules |= self.rule_modeling(name, subrule)
 
     elif name == 'due-date':
-      print( "  Found due-date for ({}, {})".format(name, rule))
       if rule[0] == '=':
-        print( "  Found rule: ({},{})".format(name, int(rule[1])))
         rules.add( (name, int(rule[1])))
       elif rule[0] == '<':
         for i in range( 0, int(rule[1]) ):
-          print( "  Found rule: ({},{})".format(name, i))
           rules.add((name, i))
       else:
         logging.error( "Rule ({}, {}) not supported".format( name, rule ))
 
     else:
-      print( "  Found rule: ({}, {})".format(name, rule) )
       rules.add((name, rule))
     
-    print( "  Returning: {}".format(rules))
     return rules
 
 
