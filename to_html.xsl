@@ -11,7 +11,7 @@
     <div class="loans">
       <div>Pourquoi reçois-je ce message ?</div>
       <ul>
-        <xsl:apply-templates select="sending-rules/*[@value]"/>
+        <xsl:apply-templates select="sending-rules/days-left[not(@value = following-sibling::days-left/@value)] | sending-rules/weekday[@value] | sending-rules/list-change[@value]"/>
       </ul>
     </div>
 
@@ -37,11 +37,13 @@
   <xsl:variable name="owner" select="@owner"/>
   <li class="book">
     <xsl:attribute name="style">
-      margin-left: 1em; padding-right: 2px; background: linear-gradient(to right, rgba(255,0,0,0) 99%, <xsl:value-of select="document('LoansManager-external-variables.xml')//owner-colour-list/*[@owner=$owner]"/>);
+      margin-left: 1em; padding-right: 2px; background: linear-gradient(to right, rgba(255,0,0,0) 99%, <xsl:value-of select="document('external_variables.xml')//owner-colour-list/*[@owner=$owner]"/>);
     </xsl:attribute>
     <b><xsl:value-of select="title"/></b>, <i><xsl:value-of select="author"/></i>
     <!-- todo: show owner name only when owner changes -->
-    <div style="float: right; clear: right; margin-left: 2em; color: grey; font-size: small; font-style: italic;"><xsl:value-of select="$owner"/></div>
+    <xsl:if test="not(@owner = preceding-sibling::loan/@owner)">
+      <div style="float: right; clear: right; margin-left: 2em; color: grey; font-size: small; font-style: italic;"><xsl:value-of select="$owner"/></div>
+    </xsl:if>
   </li>
 </xsl:template>
 

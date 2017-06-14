@@ -14,7 +14,7 @@ users:
         weekday: Mon
         due-date: ['=7d', '<3d']
         list-change: False
-     active: True
+     active: False
 
 # The library card credentials that allows to connect the library website
 library-cards:
