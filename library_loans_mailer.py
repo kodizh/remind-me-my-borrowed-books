@@ -19,10 +19,12 @@ d   – When the list has changed (either absolute return date or number of item
 d – Specify in the mail why it was sent, i.e. valid above reasons
 d – Store the configuration and preferences in an external configuration file
 d   – Link the conditions to a user and apply them to him
-  – Better organise the source code
-    – Define classes, e.g FetchBooks, ManageBooks, SendBooks
-    – Find a way to better address the email content generation
+p – Better organise the source code
+p   – Define classes, e.g FetchBooks, ManageBooks, SendBooks
+p   – Find a way to better address the email content generation
   – Add internationalisation ^^
+
+d is "done", p is "in progress"
 """
 
 
@@ -50,6 +52,8 @@ from xtemplate import Xtemplate
 Install_Directory = os.path.dirname(os.path.abspath(__file__))
 Backup_List_File = Install_Directory +'/library_list.bak'
 Logging_File = Install_Directory +'/library_loans_mailer.log'
+
+# Dictionary for displaying the days of the week (todo: use Python's date libraries)
 Weekdays = {'Mon': 'lundi', 'Tue': 'mardi', 'Wed': 'mercredi', 'Thu': 'jeudi', 'Fri': 'vendredi', 'Sat': 'samedi', 'Sun': 'dimanche'}
 
 locale_system = locale.getlocale( locale.LC_TIME )
@@ -65,20 +69,29 @@ config.registerCondition( 'weekday', dt.datetime.now().strftime( "%a" ))
 
 #locale.setlocale(locale.LC_TIME, str('fr_FR'))
 
+""" for library user card, connect to the library's website, fetch the loans and add
+    them to the general list
+"""
 for card in config.cards:
     library.login(card)
     user_loans = library.fetch_loans(card)
     loans.extend( user_loans )
 
+# sort the list by ascending remaining days
 loans = sorted( loans, key=itemgetter('left_days') )
 
 
-""" Copy the list and remove the left_days that are changing every seconds """
+""" The loans list is saved for backup. Then, at the next run, the backup list is compared with the fresh
+    one in order to find out if the loans list has changed (i.e. new books were borrowed or books were
+    brought back. The whole backup is compare as is, with no specific matches.
+"""
+
+# The 'left_days' field is removed from the backup because it changes every day, and the lists would never match.
 bakloans = [dict(x) for x in loans]
 for loan in bakloans:
   del loan['left_days']
 
-""" Compare the backup and the new list """
+# Compare the backup list and the fresh list
 try:
   fbackup = open( Backup_List_File, 'rb')
 except IOError as ioe:
@@ -90,7 +103,7 @@ else:
     config.registerCondition( 'list-change', True )
   fbackup.close()
 
-""" Write the new list as backup """
+# Write the fresh list as the new backup list
 try:
   fbackup = open( Backup_List_File, 'wb' )
 except IOError as ioe:
@@ -99,14 +112,20 @@ else:
   pickle.dump(bakloans, fbackup, pickle.HIGHEST_PROTOCOL)
   fbackup.close()
 
-""" Writing the emails and sending them to the eligible recipients """
-# content_root = generator.set_value( None, 'loan-data' )
+
+""" For each user (message recipient), we write a specific email. The message is created in pure XML
+    using the Xtemplate library, and then transformed into GMail compatible HTML and into PlainText
+    using XSL stylesheets.
+    Then the messages is sent to the recipient.
+"""
+
 content_root = None
 
 for recipient in config.getRecipients():
 
   days_left = None
   for entry in loans:
+    # For each change of 'remaining days', a new loan-set is created
     if days_left == None or days_left != entry['left_days'].days:
       days_left = entry['left_days'].days
       loan_set = generator.new_value( content_root, '/loan-data/loan-set' )
@@ -125,7 +144,7 @@ for recipient in config.getRecipients():
 
   content_root = generator.getroot(loan)
 
-  """ Generating some general statistics """
+  """ Generating general statistics """
   stats = generator.set_value( content_root, './stats' )
 
   generator.set_value( stats, './total', len(loans) )
@@ -143,8 +162,9 @@ for recipient in config.getRecipients():
 
   content_root = generator.getroot(days_left)
 
-  """ Generating user rules reminder """
-  # All rules
+  """ Generating user rules reminder.
+      It's too complicated yet. How can this be simplified?
+  """
   ct_rules = generator.set_value( content_root, './sending-rules' )
 
   for name, rule in [x['sending-rules'] for x in config.users if x['mail'] == recipient[0]][0].items():
@@ -181,16 +201,18 @@ for recipient in config.getRecipients():
   
   content_root = generator.getroot(ct_rules)
 
+  # Write the generated XML message for futher debugging (if required)
   xml_data = open( 'generated_content.xml', 'w' )
   xml_data.write( etree.tostring( content_root, method='xml', pretty_print=True, encoding='unicode' ))
   xml_data.close()
 
+  """ Convert the XML message to HTML and PlainText and send it to the recipient """
   msg = MIMEMultipart('alternative')
   msg.attach( MIMEText( etree.tostring( generator.transform( content_root, 'to_html.xsl' ), pretty_print=True, encoding='unicode' ), 'html' ))
   msg.attach( MIMEText( str( generator.transform( content_root, 'to_plaintext.xsl' )), 'text' ))
   msg["From"] = "[ENTER SENDER EMAIL HERE]"
   msg["To"] = recipient[0]
-  msg["Subject"] = u"[Bibliothèque] Emprunts à la bibliothèque de Mordelles"
+  msg["Subject"] = u"[Bibliothèque][X] Emprunts à la bibliothèque de Mordelles"
   p = Popen(["/usr/sbin/sendmail", "-t", "-oi"], stdin=PIPE, universal_newlines=True)
   p.communicate(msg.as_string())
   logging.info( "Mail sent to {}".format( recipient[0] ))

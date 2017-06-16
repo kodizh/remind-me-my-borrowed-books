@@ -30,6 +30,10 @@ class Xtemplate:
   in the fragment, and in case of failure, the location is reduced iteratively.
   The difference with the set_value method is that in case of match, the new_value method creates
   a new subnode for the first subelement.
+  \param xml_fragment the fragment of xml to query against for setting the value
+  \param xlocation the XPath expression to set the value at, inside the XML fragment
+  \param value the value to set. If None is provided, the element will be created empty
+  \return the base element that matched the provided location
   """
   def new_value(self, xml_fragment, xlocation, value=None):
     split = xlocation.split( '/' )
@@ -65,13 +69,14 @@ class Xtemplate:
   The set_value method sets a value to a given location. The location is a XPath location.
   Just as the new_value method, the set_value method tries to match the whole XPath location
   in the fragment, and in case of failure, the location is reduced iteratively.
+
   The difference with the new_value method is that in case of match, the set_value method changes
   the value of the first subelement.
 
-  \source the xpath expression which addresses the part to instanciate.
-  \value (tbbd) a scalar, a tuple, or a list of values (?) to emplace into the instantiated part.
-  \dest a xpath expression to possibly moves the instantiated part to another location in the document.
-  \return 
+  \param xml_fragment the fragment of xml to query against for setting the value
+  \param xlocation the XPath expression to set the value at, inside the XML fragment
+  \param value the value to set. If None is provided, the element will be created empty
+  \return the base element that matched the provided location
   """
   def set_value(self, xml_fragment, xlocation, value=None):
     base_element, new_elements, location = self.find_matching_element( xml_fragment, xlocation )
@@ -100,10 +105,12 @@ class Xtemplate:
   """
   Find the deepest XML element that matches the XPath location. The XPath query is tested
   against the XML fragment. If the two don't match, the XPath query is shortened by one
-  element, and the process is repeted.
-  \param xml_fragment
-  \param xlocation
-  \return 
+  element, and the process is repeted until the location matches.
+  \param xml_fragment The fragment of XML to search for the provided location
+  \param xlocation The location to search in the XML fragment
+  \return The value that was returned by the matching location
+  \return A list of the elements that didn't match and were removed from the end of the location
+  \return The location that eventually match after being shortened
   """
   def find_matching_element( self, xml_fragment, xlocation ):
     if xml_fragment is None:
@@ -124,6 +131,11 @@ class Xtemplate:
     return current_element[0], new_elements, short_location
 
   """
+  Returns the root element of the XML document, given any element as returned
+  by a XPath query. The method uses the getparent() method until the root is
+  found.
+  \param element The element that is any subelement of the XML document
+  \return The root element of the XML document
   """
   def getroot(self, element):
     parent = element

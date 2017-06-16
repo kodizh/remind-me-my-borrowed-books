@@ -11,14 +11,23 @@
     <div class="loans">
       <div>Pourquoi reçois-je ce message ?</div>
       <ul>
+        <!-- Displays the rules that matched the user-based sending rules. For each rule the @value attribute
+             means that the rule has matched.
+             – Remaining days rule that is not followed by any other active remaining days rule (this avoid
+               duplicates, and it means that only the last one is displayed)
+             – The current week of the day
+             – The list of books has changed
+        -->
         <xsl:apply-templates select="sending-rules/days-left[@value and not(@value = following-sibling::days-left/@value)] | sending-rules/weekday[@value] | sending-rules/list-change[@value]"/>
       </ul>
     </div>
 
     <div style="display: inline-block;">
+      <!-- A loan-set is a set of loans to give back at the same date -->
       <xsl:apply-templates select="loan-set"/>
     </div>
 
+    <!-- Statistics and ALL sending rules for this message -->
     <xsl:apply-templates select="stats|sending-rules"/>
   </body>
 </html>
@@ -40,13 +49,14 @@
       margin-left: 1em; padding-right: 2px; background: linear-gradient(to right, rgba(255,0,0,0) 99%, <xsl:value-of select="document('external_variables.xml')//owner-colour-list/*[@owner=$owner]"/>);
     </xsl:attribute>
     <b><xsl:value-of select="title"/></b>, <i><xsl:value-of select="author"/></i>
-    <!-- todo: show owner name only when owner changes -->
+    <!-- When the owner has several loans in this set, only shows his name next to the first loan -->
     <xsl:if test="not(@owner = preceding-sibling::loan/@owner)">
       <div style="float: right; clear: right; margin-left: 2em; color: grey; font-size: small; font-style: italic;"><xsl:value-of select="$owner"/></div>
     </xsl:if>
   </li>
 </xsl:template>
 
+<!-- General statistics about the current loans -->
 <xsl:template match="stats">
   <div style="color: grey; font-size: x-small; border: 1px solid lightgrey; margin-bottom: 1em;">
     <div style="font-style: italic; font-size: small; padding: .1em 0 .1em .5em; background: darkgrey; color: white;">Statistiques</div>
@@ -66,6 +76,7 @@
   </div>
 </xsl:template>
 
+<!-- Shows the sending rule that triggers the sending of a message for this user -->
 <xsl:template match="sending-rules">
   <div style="color: grey; font-size: x-small; border: 1px solid lightgrey;">
     <div style="font-style: italic; font-size: small; padding: .1em 0 .1em .5em; background: darkgrey; color: white;">Mes conditions d'envoi</div>

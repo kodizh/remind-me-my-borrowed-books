@@ -21,16 +21,41 @@ class ConfigurationManager:
       self.processRules( user, user['sending-rules'].items() )
 
 
+  """
+  Given a user and a set a rules, analyse all the rules and store them in
+  the user set of rules for later match with the session conditions.
+  \param user the dictionary related to this user settings
+  \param the set of rules to analyse and associate to the user
+  """
   def processRules( self, user, rules ):
     for name, rule in rules:
       new_rules = self.rule_modeling( name, rule )
       user['condition_set'] |= new_rules
 
 
+  """
+  Register a condition linked to this session for matching against the user
+  rules, and find out if a user a concerned about receiving a message at this
+  moment.
+  \param key the name of the rule
+  \param value the value of the rule
+  """
   def registerCondition(self, key, value ):
     self.session_conditions.add( (key, value) )
 
 
+  """
+  Transform a formal rule (that cannot be directly compared to other rules
+  to a rule that can be compared.
+  
+  For example a rule about matching remaining
+  days is formalised as "<3d" which means the user must be warning if the
+  book must be returned is less than 3 days. The expanded set of rules is
+  then ( ('due-date', 0), ('due-date', 1), ('due-date', 2) ).
+  \param name the name of the rule
+  \param rule the formal expression of the rule
+  \return the set of expanded exploitable rule expression
+  """
   def rule_modeling(self, name, rule):
     rules = set()
 
@@ -54,10 +79,22 @@ class ConfigurationManager:
     return rules
 
 
+  """
+  Returns if a given rule (name of the rule, and the rule itself) matches any
+  rule of the current execution.
+  \param the name of the rule
+  \param the rule expression
+  \return the matching rule of the session as a list
+  """
   def rule_match(self, name, rule):
     return set(self.rule_modeling(name, rule)) & self.session_conditions
 
 
+  """
+  Returns a list containing the user that are active for receiving reminder messages,
+  and whose sending rules matches at least one rule of the current batch sending.
+  \return the list of user that will receive a message during this execution
+  """
   def getRecipients(self):
     recipients_list = list()
     for user in self.users:

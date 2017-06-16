@@ -6,13 +6,21 @@
 <xsl:template match="/loan-data">
 
 Pourquoi reçois-je ce message ?
-<xsl:apply-templates select="sending-rules/*[@value]"/>
+<!-- Displays the rules that matched the user-based sending rules. For each rule the @value attribute
+     means that the rule has matched.
+     – Remaining days rule that is not followed by any other active remaining days rule (this avoid
+       duplicates, and it means that only the last one is displayed)
+     – The current week of the day
+     – The list of books has changed
+-->
+<xsl:apply-templates select="sending-rules/days-left[@value and not(@value = following-sibling::days-left/@value)] | sending-rules/weekday[@value] | sending-rules/list-change[@value]"/>
 
 <xsl:apply-templates select="loan-set"/>
 
 <xsl:apply-templates select="stats|sending-rules"/>
 </xsl:template>
 
+<!-- A loan-set is a set of loans to give back at the same date -->
 <xsl:template match="loan-set">
 
 ✔ <xsl:value-of select="days-left"/> jours restants (retour le <xsl:value-of select="return-date"/>)
@@ -21,10 +29,11 @@ Pourquoi reçois-je ce message ?
 
 <xsl:template match="loan">
   <xsl:variable name="owner" select="@owner"/>
-  – <xsl:value-of select="title"/>, <xsl:value-of select="author"/>           — <xsl:value-of select="$owner"/>
-    <!-- todo: show owner name only when owner changes -->
+<!-- When the owner has several loans in this set, only shows his name next to the first loan -->
+  – <xsl:value-of select="title"/>, <xsl:value-of select="author"/><xsl:if test="not(@owner = preceding-sibling::loan/@owner)">           — <xsl:value-of select="$owner"/></xsl:if>
 </xsl:template>
 
+<!-- General statistics about the current loans -->
 <xsl:template match="stats">
   
 Statistiques :
@@ -33,6 +42,7 @@ Statistiques :
   – Nombre de livres à rendre :<xsl:apply-templates select="days-left"/>
 </xsl:template>
 
+<!-- Shows the sending rule that triggers the sending of a message for this user -->
 <xsl:template match="sending-rules">
 
 Mes conditions d'envoi :
