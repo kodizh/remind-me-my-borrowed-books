@@ -1,32 +1,6 @@
 #!/usr/bin/env python3
 # coding: utf8
 
-"""
-Feature wishlist :
-d – Organiser et formatter les informations
-d   – Par nombre de jours restant (date)
-d   – Titre, auteur. \t Carte [groupe par carte]
-d   – Add distinctives colours for each loan, depending on the user account
-d – Add information on the recipient account (conditions, etc.)
-  – Add global information and statistics:
-d   – total number of current loans,
-d   – number of current loans per user, 
-    – number of loan per due date
-d – Defining sending conditions:
-d   – On defined weekdays
-d   – When a threshhold is passed, e.g. number of days before return < 7
-d   – When the list has changed (either absolute return date or number of items
-d – Specify in the mail why it was sent, i.e. valid above reasons
-d – Store the configuration and preferences in an external configuration file
-d   – Link the conditions to a user and apply them to him
-p – Better organise the source code
-p   – Define classes, e.g FetchBooks, ManageBooks, SendBooks
-p   – Find a way to better address the email content generation
-  – Add internationalisation ^^
-
-d is "done", p is "in progress"
-"""
-
 
 import re
 import urllib.request
@@ -202,14 +176,14 @@ for recipient in config.getRecipients():
   content_root = generator.getroot(ct_rules)
 
   # Write the generated XML message for futher debugging (if required)
-  xml_data = open( 'generated_content.xml', 'w' )
+  xml_data = open( Install_Directory +'/generated_content.xml', 'w' )
   xml_data.write( etree.tostring( content_root, method='xml', pretty_print=True, encoding='unicode' ))
   xml_data.close()
 
   """ Convert the XML message to HTML and PlainText and send it to the recipient """
   msg = MIMEMultipart('alternative')
-  msg.attach( MIMEText( etree.tostring( generator.transform( content_root, 'to_html.xsl' ), pretty_print=True, encoding='unicode' ), 'html' ))
-  msg.attach( MIMEText( str( generator.transform( content_root, 'to_plaintext.xsl' )), 'text' ))
+  msg.attach( MIMEText( etree.tostring( generator.transform( content_root, Install_Directory +'/to_html.xsl' ), pretty_print=True, encoding='unicode' ), 'html' ))
+  msg.attach( MIMEText( str( generator.transform( content_root, Install_Directory +'/to_plaintext.xsl' )), 'text' ))
   msg["From"] = "[ENTER SENDER EMAIL HERE]"
   msg["To"] = recipient[0]
   msg["Subject"] = u"[Bibliothèque][X] Emprunts à la bibliothèque de Mordelles"
