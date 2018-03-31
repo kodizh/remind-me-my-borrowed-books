@@ -79,4 +79,10 @@ Mes conditions d'envoi :
     – dans <xsl:value-of select="@days"/> jours : <xsl:value-of select="text()"/>
 </xsl:template>
 
+<xsl:template match="/error">
+An error has occured!
+
+<xsl:value-of select="description"/>
+</xsl:template>
+
 </xsl:stylesheet> 

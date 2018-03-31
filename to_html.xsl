@@ -123,4 +123,25 @@
   <li>dans <xsl:value-of select="@days"/> jours : <b><xsl:value-of select="text()"/></b></li>
 </xsl:template>
 
+<xsl:template match="/error">
+<html>
+  <head>
+    <meta charset="UTF-8"/>
+  </head>
+  <body>
+    <div class="loans">
+      <div>Pourquoi reçois-je ce message ?</div>
+      <ul>
+        <li>
+          <div style="font-weight: bold;">Error: a fault was detected during the program execution.</div>
+          <div>The daily library remainder could not be sent to the selected recipients.</div>
+        </li>
+      </ul>
+      <div>Exception description:</div>
+      <div style="margin-left: 2em; font-weight: bold;"><xsl:value-of select="description"/></div>
+    </div>
+  </body>
+</html>
+</xsl:template>
+
 </xsl:stylesheet> 

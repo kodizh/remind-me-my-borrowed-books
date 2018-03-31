@@ -8,17 +8,39 @@ Preferences_File = Install_Directory +'/preferences.yaml'
 
 class ConfigurationManager:
   def __init__(self):
-    preferences = load( open( Preferences_File ).read() )
+    self.preferences = load( open( Preferences_File ).read() )
     # The users are those with an Active state
-    self.users = [x for x in preferences['users'] if x['active']]
-    self.cards = preferences['library-cards']
-    self.resources = preferences['resources']
+    self.users = [x for x in self.preferences['users'] if x['active']]
+    self.accounts = self.preferences['library-accounts']
+    self.resources = self.preferences['resources']
     self.session_conditions = set()
 
     # Load users
     for user in self.users:
       user['condition_set'] = set()
       self.processRules( user, user['sending-rules'].items() )
+
+
+  def get( self, configuration_path ):
+    # convert the path to sequential dict/list reads
+    path = configuration_path.split( '.' )
+    # read them
+    value = self.preferences
+    for element in path:
+      value = value[element]
+    return value
+
+
+  """
+  Given a configuration path, uses the value as a filename and tries to
+  open it. Takes into account the following variables:
+   - $(install_dir): the path to the directory the program is located
+  \param configuration_path A path to the configuration value in the form
+                            path.to.value
+  \return the absolute filename with all modifiers applied
+  """
+  def get_file( self, configuration_path ):
+    value = self.get( configuration_path )
 
 
   """
@@ -104,4 +126,13 @@ class ConfigurationManager:
         logging.info( "Added recipient: {} <{}>".format( user['name'], user['mail'] ))
       else:
         logging.info( "Skipped recipient: {} <{}>".format( user['name'], user['mail'] ))
+    return recipients_list
+
+
+  def getAdmins(self):
+    recipients_list = list()
+    for user in self.users:
+      if "admin" in user['roles']:
+        logging.info( "Added admin recipient: {} <{}>".format( user['name'], user['mail'] ))
+        recipients_list.append( (user['mail'], None ))
     return recipients_list

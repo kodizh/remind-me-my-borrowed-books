@@ -6,6 +6,7 @@ users:
         weekday: ['Sun', 'Tue']  # – on which day(s) of the week
         due-date: =4d            # — when the remaining days before returning the loans is equal to or lower than a provided number of days
         list-change: True        # — when the list of loans on the library webiste has changed (some were borrowed or returned back)
+     roles: ['admin', 'user']
      active: True                # If False, the user never receives any message
 
    - name:  Edna
@@ -14,29 +15,29 @@ users:
         weekday: Mon
         due-date: ['=7d', '<3d']
         list-change: False
+     roles: user
      active: False
 
 # The library card credentials that allows to connect the library website
-library-cards:
+library-accounts:
    - name:     Edmon        # The name of the owner of the card
-     username: 12345        # The login identifier of this card
-     password: 01-01-1970   # The password associated to the card
-     colour:   aa0000       # The colour associated to the user, to quickly show which loans are on his card
-   - name:     Edna
-     username: 12346
-     password: 25-12-1975
-     colour:   00bb00
-   - name:     Mina
-     username: 12347
-     password: 14-10-2010
-     colour:   000077
+     username: Edmon@provider.net # The login identifier of this card
+     password: r!b0s0m3     # The password associated to the card
 
 resources:
+   # The URI of the library's home page
+   uri-home:      https://mediatheque.ville-mordelles.fr/
    # The URI for posting the authentication form. This allows to authenticate the user
-   uri-authform:  http://bibliotheque.ville-mordelles.fr/auth/boite-login/id_module/3
+   uri-authform:  https://mediatheque.ville-mordelles.fr/opac/user/login
    # The URI for fetching the currently authenticated user list of loans
-   uri-bookslist: http://bibliotheque.ville-mordelles.fr/abonne/prets
+   uri-bookslist: https://mediatheque.ville-mordelles.fr/opac/user/profile#loan
 
 configuration:
+   sender: Biblio Rasta <Nicolas.PepinHermann@gmail.com>
+   subject: "[Bibliothèque] Emprunts à la bibliothèque de Mordelles"
    list-backup-file: loans_list.bak    # The file in which the list of current loans is saved, in order to compare it with the next check. See 'list-change' sending rule
    log-file: library_loans_mailer.log  # The log file name
+   smtp-server: smtp.provider.net      
+   smtp-login: edmon@provider.net      
+   smtp-password: m!k4d05?35           
+
