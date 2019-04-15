@@ -88,12 +88,16 @@ class MordellesLibraryAPI:
     # 1. Fetch the loans for each user
 #    raw_loans_list = tree.xpath( './/div[@class="group-loans-content"]/*' )
     raw_loans_list = tree.xpath(".//div[@class='group-loans-content']/div | .//div[@class='group-loans-content']/p[@class='lead']")
+    logging.debug( 'RAW loans list size: {}'.format(len(raw_loans_list)))
+    
     self.user_loans = list()
     current_user = None
+    dbg_error = list()
 
     for raw_loan in raw_loans_list:
       if len( raw_loan.xpath( './/i[@class="fa fa-user"]' )) > 0:
         current_user = raw_loan.xpath( './/text()' )[1].strip().split(' ')[1]
+        logging.debug( 'Process loans for user {}'.format(current_user) )
         continue
 
       title = "Not set"
@@ -101,24 +105,28 @@ class MordellesLibraryAPI:
         title = " ".join(raw_loan.xpath('.//div[@class="loan-img hidden-xs hidden-sm"]/@data-title'))
       except:
         title = "Error"
+        dbg_error.append('title')
 
       author = "Not set"
       try:
         author = " ".join(raw_loan.xpath('.//div[@class="loan-img hidden-xs hidden-sm"]/@data-author'))
       except:
         author = "Error"
+        dbg_error.append('author')
 
       library = "Not set"
       try:
         library = " ".join(raw_loan.xpath('.//div[@class="loan-info"]/p[1]/b/text()'))
       except:
         library = "Error"
+        dbg_error.append('library')
 
       return_date = "Not set"
       try:
         return_date = dt.datetime.strptime(" ".join(raw_loan.xpath('.//div[@class="loan-info"]/p[2]/text()')), 'Retour prévu le %d-%m-%Y') + dt.timedelta(hours=20)
       except:
         return_date = "Error"
+        dbg_error.append('return_date')
 
       entry = dict({
         'owner' : current_user,
@@ -127,6 +135,9 @@ class MordellesLibraryAPI:
         'library' : library,
         'return_date' : return_date,
       })
+
+      if len(dbg_error) > 0 :
+        logging.debug( 'An error was raised while analysing fields: {}\nwhile processing loans {}'.format(dbg_error, entry) )
 
       if return_date != "Error":
         entry['left_days'] = entry['return_date'] - dt.datetime.now()
