@@ -1,4 +1,4 @@
-from yaml import load
+from yaml import load, SafeLoader
 import os
 import sys
 import logging
@@ -8,7 +8,8 @@ Preferences_File = Install_Directory +'/preferences.yaml'
 
 class ConfigurationManager:
   def __init__(self):
-    self.preferences = load( open( Preferences_File ).read() )
+    logging.info( "Reading preference file: {}".format(Preferences_File) )
+    self.preferences = load( open( Preferences_File ).read(), Loader=SafeLoader )
     # The users are those with an Active state
     self.users = [x for x in self.preferences['users'] if x['active']]
     self.accounts = self.preferences['library-accounts']

@@ -36,7 +36,10 @@ class library_loans_mailer:
 
     self.config = ConfigurationManager()
 
-    logging.basicConfig( filename = self.Install_Directory +'/'+ self.config.get("configuration.log-file"), level = logging.DEBUG, format='%(asctime)s [%(levelname)s] %(message)s' )
+    logging_file = self.Install_Directory +'/'+ self.config.get("configuration.log-file")
+    logging.basicConfig( filename = logging_file, level = logging.DEBUG, format='%(asctime)s [%(levelname)s] %(message)s' )
+    print("Writing logs to {}".format(logging_file))
+    logging.info("Starting new fetching and mailing session")
 
     self.library = MordellesLibraryAPI(self.config)
     self.generator = Xtemplate()
@@ -215,6 +218,7 @@ class library_loans_mailer:
       server.sendmail(msg['From'], msg['To'], msg.as_string())
       server.quit()
       logging.info( "Mail sent to {}".format( recipient[0] ))
+      print( "Mail sent to {}".format( recipient[0] ))
     except Exception as e:
       logging.info( "An exception occurred while sending mail to {}\nException: ({}, {}, {})".format( recipient[0], e.args, e.errno, e.strerror ))
 
