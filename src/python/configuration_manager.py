@@ -4,10 +4,9 @@ import sys
 import logging
 
 Install_Directory = os.path.dirname(os.path.abspath(__file__))
-Preferences_File = Install_Directory +'/preferences.yaml'
 
 class ConfigurationManager:
-  def __init__(self):
+  def __init__(self, Preferences_File):
     logging.info( "Reading preference file: {}".format(Preferences_File) )
     self.preferences = load( open( Preferences_File ).read(), Loader=SafeLoader )
     # The users are those with an Active state

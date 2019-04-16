@@ -17,6 +17,7 @@ import pickle
 import sys
 import os
 import logging
+import logging.handlers
 
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -28,17 +29,27 @@ from xtemplate import Xtemplate
 
 
 class library_loans_mailer:
-  def __init__(self):
-    self.Install_Directory = os.path.dirname(os.path.abspath(__file__))
+  def __init__(self, preferences, working_directory, logging_directory):
+    self.working_directory = working_directory
+    self.logging_directory = logging_directory
 
     # Dictionary for displaying the days of the week (todo: use Python's date libraries)
     self.Weekdays = {'Mon': 'lundi', 'Tue': 'mardi', 'Wed': 'mercredi', 'Thu': 'jeudi', 'Fri': 'vendredi', 'Sat': 'samedi', 'Sun': 'dimanche'}
 
-    self.config = ConfigurationManager()
+    self.config = ConfigurationManager(preferences)
 
-    logging_file = self.Install_Directory +'/'+ self.config.get("configuration.log-file")
-    logging.basicConfig( filename = logging_file, level = logging.DEBUG, format='%(asctime)s [%(levelname)s] %(message)s' )
-    print("Writing logs to {}".format(logging_file))
+    # Configure logging facility
+    app_logger = logging.getLogger()
+    app_logger.setLevel(0)
+    # Defines logger file and max size
+    handler = logging.handlers.RotatingFileHandler( logging_directory + self.config.get("configuration.log-file"), maxBytes=1000000 )
+    # Define logger format
+    formatter = logging.Formatter("%(asctime)s [%(filename)25s:%(lineno)5s - %(funcName)20s()] [%(levelname)-5.5s]  %(message)s")
+    handler.setFormatter(formatter)
+    handler.setLevel(0)
+    # add loggerhandler to applications
+    app_logger.addHandler(handler)
+
     logging.info("Starting new fetching and mailing session")
 
     self.library = MordellesLibraryAPI(self.config)
@@ -77,7 +88,7 @@ class library_loans_mailer:
 
     # Compare the backup list and the fresh list
     try:
-      fbackup = open( self.Install_Directory +'/'+ self.config.get('configuration.list-backup-file'), 'rb')
+      fbackup = open( self.working_directory +'/'+ self.config.get('configuration.list-backup-file'), 'rb')
     except IOError as ioe:
       logging.warning( "Error loading list backup. Considering the list has changed.\n\t{}".format(ioe) )
       self.config.registerCondition( 'list-change', True )
@@ -89,7 +100,7 @@ class library_loans_mailer:
 
     # Write the fresh list as the new backup list
     try:
-      fbackup = open( self.Install_Directory +'/'+ self.config.get('configuration.list-backup-file'), 'wb' )
+      fbackup = open( self.working_directory +'/'+ self.config.get('configuration.list-backup-file'), 'wb' )
     except IOError as ioe:
       logging.warning( "Unable to write the new backup list\n\t{}".format(ioe) )
     else:
@@ -106,11 +117,11 @@ class library_loans_mailer:
     content_root = None
 
     days_left = None
-    
+
     if len(self.loans) == 0:
       logging.error( "No loans in list. Quitting" )
       raise Exception
-    
+
     for entry in self.loans:
       # For each change of 'remaining days', a new loan-set is created
       if days_left == None or days_left != entry['left_days'].days:
@@ -125,7 +136,7 @@ class library_loans_mailer:
       self.generator.set_value( loan, './@owner', entry['owner'] )
       self.generator.set_value( loan, './title', entry['title'] )
       self.generator.set_value( loan, './author', entry['author'] )
-      
+
       # NPH TODO: Next instruction is mandatory, find out why
       content_root = self.generator.getroot(loan)
 
@@ -195,13 +206,13 @@ class library_loans_mailer:
   def send_message(self, recipient, xml_document):
 
     # Write the generated XML message for futher debugging (if required)
-    xml_data = open( self.Install_Directory +'/generated_content.xml', 'w' )
+    xml_data = open( self.logging_directory +'/generated_content.xml', 'w' )
     xml_data.write( etree.tostring( xml_document, method='xml', pretty_print=True, encoding='unicode' ))
     xml_data.close()
-    
+
     # Write the generated XML message for futher debugging (if required)
-    xml_data = open( self.Install_Directory +'/generated_content.html', 'w' )
-    xml_data.write( etree.tostring( self.generator.transform( xml_document, self.Install_Directory +'/to_html.xsl' ), pretty_print=True, encoding='unicode' ))
+    xml_data = open( self.logging_directory +'/generated_content.html', 'w' )
+    xml_data.write( etree.tostring( self.generator.transform( xml_document, self.working_directory +'/src/formatting/to_html.xsl' ), pretty_print=True, encoding='unicode' ))
     xml_data.close()
 
     """ Convert the XML message to HTML and PlainText and send it to the recipient """
@@ -209,8 +220,8 @@ class library_loans_mailer:
     msg['Subject'] = self.config.get( "configuration.subject" )
     msg['From'] = "Biblio Rasta <{}>".format( recipient[0] )
     msg['To'] = recipient[0]
-    msg.attach( MIMEText( etree.tostring( self.generator.transform( xml_document, self.Install_Directory +'/to_html.xsl' ), pretty_print=True, encoding='unicode' ), 'html' ))
-    msg.attach( MIMEText( str( self.generator.transform( xml_document, self.Install_Directory +'/to_plaintext.xsl' )), 'text' ))
+    msg.attach( MIMEText( etree.tostring( self.generator.transform( xml_document, self.working_directory +'/src/formatting/to_html.xsl' ), pretty_print=True, encoding='unicode' ), 'html' ))
+    msg.attach( MIMEText( str( self.generator.transform( xml_document, self.working_directory +'/src/formatting/to_plaintext.xsl' )), 'text' ))
 
     try:
       server = smtplib.SMTP_SSL( "{}:465".format( self.config.get( "configuration.smtp-server" )))
@@ -243,11 +254,7 @@ class library_loans_mailer:
 
       # Add the current content of the data structure built from the library web page
       print( "Current loans list content:\n{}".format( self.library.user_loans ))
-      
+
       # Send the message to users who have the role 'admin'
       for admin_recipient in self.config.getAdmins():
         self.send_message( admin_recipient, xml_message )
-
-if __name__ == "__main__":
-  mailer = library_loans_mailer()
-  mailer.run()

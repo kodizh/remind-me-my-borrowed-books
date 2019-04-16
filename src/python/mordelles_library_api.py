@@ -13,10 +13,6 @@ class MordellesLibraryAPI:
   def __init__(self, config):
     self.configuration = config
     self.cookie = None
-    
-    Install_Directory = os.path.dirname(os.path.abspath(__file__))
-    logging.basicConfig( filename = Install_Directory +'/'+ self.configuration.get("configuration.log-file"), level = logging.DEBUG, format='%(asctime)s [%(levelname)s] %(message)s' )
-
 
   """
   """
@@ -79,9 +75,9 @@ class MordellesLibraryAPI:
     # encoding is fetch roughly
     encoding = re.findall(r'<meta.*?charset=["\']*(.+?)["\'>]', str(the_page), flags=re.I)[0]
     tree = etree.HTML( the_page.decode(encoding) )
-    
+
     """ NPH WIP LOG """
-    main_page = open( "main_page.html", 'w' )
+    main_page = open( "log/main_page.html", 'w' )
     main_page.write( the_page.decode(encoding) )
     main_page.close()
 
@@ -89,7 +85,7 @@ class MordellesLibraryAPI:
 #    raw_loans_list = tree.xpath( './/div[@class="group-loans-content"]/*' )
     raw_loans_list = tree.xpath(".//div[@class='group-loans-content']/div | .//div[@class='group-loans-content']/p[@class='lead']")
     logging.debug( 'RAW loans list size: {}'.format(len(raw_loans_list)))
-    
+
     self.user_loans = list()
     current_user = None
     dbg_error = list()
