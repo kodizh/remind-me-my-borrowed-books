@@ -7,7 +7,6 @@ Install_Directory = os.path.dirname(os.path.abspath(__file__))
 
 class ConfigurationManager:
   def __init__(self, Preferences_File):
-    logging.info( "Reading preference file: {}".format(Preferences_File) )
     self.preferences = load( open( Preferences_File ).read(), Loader=SafeLoader )
     # The users are those with an Active state
     self.users = [x for x in self.preferences['users'] if x['active']]
@@ -20,6 +19,11 @@ class ConfigurationManager:
       user['condition_set'] = set()
       self.processRules( user, user['sending-rules'].items() )
 
+  def __enter__(self):
+      return self
+
+  def __exit__(self, exc_type, exc_value, traceback):
+      pass
 
   def get( self, configuration_path ):
     # convert the path to sequential dict/list reads
@@ -69,7 +73,7 @@ class ConfigurationManager:
   """
   Transform a formal rule (that cannot be directly compared to other rules
   to a rule that can be compared.
-  
+
   For example a rule about matching remaining
   days is formalised as "<3d" which means the user must be warning if the
   book must be returned is less than 3 days. The expanded set of rules is
@@ -97,7 +101,7 @@ class ConfigurationManager:
 
     else:
       rules.add((name, rule))
-    
+
     return rules
 
 

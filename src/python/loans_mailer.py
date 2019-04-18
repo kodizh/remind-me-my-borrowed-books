@@ -17,43 +17,22 @@ import pickle
 import sys
 import os
 import logging
-import logging.handlers
 
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import smtplib
 
-from configuration_manager import ConfigurationManager
-from mordelles_library_api import MordellesLibraryAPI
-from xtemplate import Xtemplate
 
-
-class library_loans_mailer:
-  def __init__(self, preferences, working_directory, logging_directory):
-    self.working_directory = working_directory
-    self.logging_directory = logging_directory
-
+class LoansMailer:
+  def __init__(self, config_mgr, data_mgr, lib_api, formatter):
     # Dictionary for displaying the days of the week (todo: use Python's date libraries)
     self.Weekdays = {'Mon': 'lundi', 'Tue': 'mardi', 'Wed': 'mercredi', 'Thu': 'jeudi', 'Fri': 'vendredi', 'Sat': 'samedi', 'Sun': 'dimanche'}
 
-    self.config = ConfigurationManager(preferences)
+    self.config = config_mgr
 
-    # Configure logging facility
-    app_logger = logging.getLogger()
-    app_logger.setLevel(0)
-    # Defines logger file and max size
-    handler = logging.handlers.RotatingFileHandler( logging_directory + self.config.get("configuration.log-file"), maxBytes=1000000 )
-    # Define logger format
-    formatter = logging.Formatter("%(asctime)s [%(filename)25s:%(lineno)5s - %(funcName)20s()] [%(levelname)-5.5s]  %(message)s")
-    handler.setFormatter(formatter)
-    handler.setLevel(0)
-    # add loggerhandler to applications
-    app_logger.addHandler(handler)
-
-    logging.info("Starting new fetching and mailing session")
-
-    self.library = MordellesLibraryAPI(self.config)
-    self.generator = Xtemplate()
+    self.library_api = lib_api
+    self.data_manager = data_mgr
+    self.formatter = formatter
     self.loans = list()
 
     # Set the locale to a universal value and back to french — Needs more testing!
@@ -63,13 +42,20 @@ class library_loans_mailer:
 
     #self.locale.setlocale(locale.LC_TIME, str('fr_FR'))
 
+  def __enter__(self):
+    return self
+
+  def __exit__(self, exc_type, exc_value, traceback):
+    pass
+
+
   """ for each library user account, connect to the library's website, fetch the loans and add
       them to the general list
   """
   def fetch_loans_list(self):
     for user_account in self.config.accounts:
-        self.library.login(user_account)
-        user_loans = self.library.analyse_loans_page()
+        self.library_api.login(user_account)
+        user_loans = self.library_api.analyse_loans_page()
         self.loans.extend( user_loans )
 
     # sort the list by ascending remaining days
@@ -88,7 +74,7 @@ class library_loans_mailer:
 
     # Compare the backup list and the fresh list
     try:
-      fbackup = open( self.working_directory +'/'+ self.config.get('configuration.list-backup-file'), 'rb')
+      fbackup = open( self.config.get('configuration.list-backup-file'), 'rb')
     except IOError as ioe:
       logging.warning( "Error loading list backup. Considering the list has changed.\n\t{}".format(ioe) )
       self.config.registerCondition( 'list-change', True )
@@ -100,7 +86,7 @@ class library_loans_mailer:
 
     # Write the fresh list as the new backup list
     try:
-      fbackup = open( self.working_directory +'/'+ self.config.get('configuration.list-backup-file'), 'wb' )
+      fbackup = open( self.config.get('configuration.list-backup-file'), 'wb' )
     except IOError as ioe:
       logging.warning( "Unable to write the new backup list\n\t{}".format(ioe) )
     else:
@@ -126,93 +112,93 @@ class library_loans_mailer:
       # For each change of 'remaining days', a new loan-set is created
       if days_left == None or days_left != entry['left_days'].days:
         days_left = entry['left_days'].days
-        loan_set = self.generator.new_value( content_root, '/loan-data/loan-set' )
+        loan_set = self.formatter.new_value( content_root, '/loan-data/loan-set' )
 
-        self.generator.set_value( loan_set, './days-left', entry['left_days'].days )
-        self.generator.set_value( loan_set, './return-date', entry['return_date'].strftime( "%A %d %B %Y" ))
+        self.formatter.set_value( loan_set, './days-left', entry['left_days'].days )
+        self.formatter.set_value( loan_set, './return-date', entry['return_date'].strftime( "%A %d %B %Y" ))
 
-      loan = self.generator.new_value( loan_set, './loan' )
+      loan = self.formatter.new_value( loan_set, './loan' )
 
-      self.generator.set_value( loan, './@owner', entry['owner'] )
-      self.generator.set_value( loan, './title', entry['title'] )
-      self.generator.set_value( loan, './author', entry['author'] )
+      self.formatter.set_value( loan, './@owner', entry['owner'] )
+      self.formatter.set_value( loan, './title', entry['title'] )
+      self.formatter.set_value( loan, './author', entry['author'] )
 
       # NPH TODO: Next instruction is mandatory, find out why
-      content_root = self.generator.getroot(loan)
+      content_root = self.formatter.getroot(loan)
 
-    content_root = self.generator.getroot(loan)
+    content_root = self.formatter.getroot(loan)
 
     """ Generating general statistics """
-    stats = self.generator.set_value( content_root, './stats' )
+    stats = self.formatter.set_value( content_root, './stats' )
 
-    self.generator.set_value( stats, './total', len(self.loans) )
+    self.formatter.set_value( stats, './total', len(self.loans) )
 
     for owner in list(set([x['owner'] for x in self.loans])):
-      user = self.generator.new_value( stats, './user', str(len([x for x in self.loans if x['owner'] == owner])))
-      self.generator.set_value( user, './@name', owner )
+      user = self.formatter.new_value( stats, './user', str(len([x for x in self.loans if x['owner'] == owner])))
+      self.formatter.set_value( user, './@name', owner )
 
-    content_root = self.generator.getroot(user)
+    content_root = self.formatter.getroot(user)
 
     for days in list(set([x['left_days'].days for x in self.loans])):
-      days_left = self.generator.new_value( stats, './days-left', str(len([x for x in self.loans if x['left_days'].days == days])))
-      self.generator.set_value( days_left, './@days', str(days) )
+      days_left = self.formatter.new_value( stats, './days-left', str(len([x for x in self.loans if x['left_days'].days == days])))
+      self.formatter.set_value( days_left, './@days', str(days) )
 
 
-    content_root = self.generator.getroot(days_left)
+    content_root = self.formatter.getroot(days_left)
     return content_root
 
   """ Generating user rules reminder.
       It's too complicated yet. How can this be simplified?
   """
   def generate_user_rules(self, recipient, xml_document):
-    ct_rules = self.generator.set_value( xml_document, './sending-rules' )
+    ct_rules = self.formatter.set_value( xml_document, './sending-rules' )
 
     for name, rule in [x['sending-rules'] for x in self.config.users if x['mail'] == recipient[0]][0].items():
       if name == 'list-change' and rule == True:
-        ct_rule_change = self.generator.new_value( ct_rules, './list-change', None )
+        ct_rule_change = self.formatter.new_value( ct_rules, './list-change', None )
         if self.config.rule_match(name, rule):
-          self.generator.set_value( ct_rule_change, './@value', 'true' )
+          self.formatter.set_value( ct_rule_change, './@value', 'true' )
 
       elif name == 'due-date':
         if type( rule ) is not list:
           rule = [rule]
         for subrule in rule:
-          ct_rule_days = self.generator.new_value( ct_rules, './days-left', subrule[1] )
+          ct_rule_days = self.formatter.new_value( ct_rules, './days-left', subrule[1] )
           if subrule[0] == '<':
-            self.generator.set_value( ct_rule_days, './@type', 'inf')
+            self.formatter.set_value( ct_rule_days, './@type', 'inf')
           else:
-            self.generator.set_value( ct_rule_days, './@type', 'eq')
+            self.formatter.set_value( ct_rule_days, './@type', 'eq')
 
           matched_rule = self.config.rule_match(name, subrule)
           if matched_rule:
-            self.generator.set_value( ct_rule_days, './@value', str(matched_rule.pop()[1]) )
+            self.formatter.set_value( ct_rule_days, './@value', str(matched_rule.pop()[1]) )
 
 
       elif name == 'weekday':
         if type( rule ) is not list:
           rule = [rule]
         for subrule in rule:
-          ct_rule_wday = self.generator.new_value( ct_rules, './weekday', self.Weekdays[subrule] )
+          ct_rule_wday = self.formatter.new_value( ct_rules, './weekday', self.Weekdays[subrule] )
           if self.config.rule_match(name, subrule):
-            self.generator.set_value( ct_rule_wday, './@value', subrule )
+            self.formatter.set_value( ct_rule_wday, './@value', subrule )
 
       else:
         continue
 
-    xml_document = self.generator.getroot(ct_rules)
+    xml_document = self.formatter.getroot(ct_rules)
     return xml_document
 
 
   def send_message(self, recipient, xml_document):
 
     # Write the generated XML message for futher debugging (if required)
-    xml_data = open( self.logging_directory +'/generated_content.xml', 'w' )
+    xml_data = open( 'var/generated_content.xml', 'w' )
     xml_data.write( etree.tostring( xml_document, method='xml', pretty_print=True, encoding='unicode' ))
     xml_data.close()
 
     # Write the generated XML message for futher debugging (if required)
-    xml_data = open( self.logging_directory +'/generated_content.html', 'w' )
-    xml_data.write( etree.tostring( self.generator.transform( xml_document, self.working_directory +'/src/formatting/to_html.xsl' ), pretty_print=True, encoding='unicode' ))
+    xml_data = open( 'var/generated_content.html', 'w' )
+    xml_data.write( etree.tostring( self.formatter.transform( xml_document, 'src/formatting/to_html.xsl' ), pretty_print=True, encoding='unicode' ))
     xml_data.close()
 
     """ Convert the XML message to HTML and PlainText and send it to the recipient """
@@ -220,8 +206,8 @@ class library_loans_mailer:
     msg['Subject'] = self.config.get( "configuration.subject" )
     msg['From'] = "Biblio Rasta <{}>".format( recipient[0] )
     msg['To'] = recipient[0]
-    msg.attach( MIMEText( etree.tostring( self.generator.transform( xml_document, self.working_directory +'/src/formatting/to_html.xsl' ), pretty_print=True, encoding='unicode' ), 'html' ))
-    msg.attach( MIMEText( str( self.generator.transform( xml_document, self.working_directory +'/src/formatting/to_plaintext.xsl' )), 'text' ))
+    msg.attach( MIMEText( etree.tostring( self.formatter.transform( xml_document, 'src/formatting/to_html.xsl' ), pretty_print=True, encoding='unicode' ), 'html' ))
+    msg.attach( MIMEText( str( self.formatter.transform( xml_document, 'src/formatting/to_plaintext.xsl' )), 'text' ))
 
     try:
       server = smtplib.SMTP_SSL( "{}:465".format( self.config.get( "configuration.smtp-server" )))
@@ -248,12 +234,12 @@ class library_loans_mailer:
     except Exception as e:
       # Build the message according to the exception
       xml_message = None
-      error = self.generator.new_value( xml_message, '/error' )
-      self.generator.set_value( error, './description', "{}".format(e) )
-      xml_message = self.generator.getroot(error)
+      error = self.formatter.new_value( xml_message, '/error' )
+      self.formatter.set_value( error, './description', "{}".format(e) )
+      xml_message = self.formatter.getroot(error)
 
       # Add the current content of the data structure built from the library web page
-      print( "Current loans list content:\n{}".format( self.library.user_loans ))
+      print( "Current loans list content:\n{}".format( self.library_api.user_loans ))
 
       # Send the message to users who have the role 'admin'
       for admin_recipient in self.config.getAdmins():

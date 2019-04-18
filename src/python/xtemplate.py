@@ -11,6 +11,12 @@ class Xtemplate:
   def __init__(self):
     self.built_tree = etree
 
+  def __enter__(self):
+    return self
+
+  def __exit__(self, exc_type, exc_value, traceback):
+    pass
+
   """
   The load_template() method loads a new template file, i.e. the XML file which serves as the base documents
   from which the generated document is created.
@@ -22,8 +28,8 @@ class Xtemplate:
     xml_fragment = etree.XML( template_content )
     template_content.close()
     return xml_fragment
-    
-   
+
+
   """
   The new_value method sets a new value to a given location. The location is a XPath location.
   Just as the set_value method, the new_value method tries to match the whole XPath location
@@ -127,7 +133,7 @@ class Xtemplate:
       short_location = '/'.join( split[0:-1] )
       new_elements.insert(0, split[-1])
       current_element = xml_fragment.xpath( short_location )
-      
+
     return current_element[0], new_elements, short_location
 
   """
@@ -141,7 +147,7 @@ class Xtemplate:
     parent = element
     while parent.getparent() != None:
       parent = parent.getparent()
-      
+
     return parent
   """
   Proposed Stub
@@ -152,16 +158,16 @@ class Xtemplate:
   def move(self, xml_fragment, xsource, xdest):
     copy(xsource, xdest)
     remove(xsource, xdest)
-    
+
   """
   Proposed stub
   Copy a specified subtree to another location. The original subtree is kept in place.
   \param source the location of the top element of the tree to move
-  \param dest the location to move the tree to  
+  \param dest the location to move the tree to
   """
   def copy(self, xml_fragment, xsource, xdest):
     print( "Copying node" )
-    
+
   """
   Proposed stub
   Removes a specified subtree from the current tree.

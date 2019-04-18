@@ -14,6 +14,12 @@ class MordellesLibraryAPI:
     self.configuration = config
     self.cookie = None
 
+  def __enter__(self):
+    return self
+
+  def __exit__(self, exc_type, exc_value, traceback):
+    pass
+
   """
   """
   def get_page(self, uri, auth_data = None):
@@ -77,7 +83,7 @@ class MordellesLibraryAPI:
     tree = etree.HTML( the_page.decode(encoding) )
 
     """ NPH WIP LOG """
-    main_page = open( "log/main_page.html", 'w' )
+    main_page = open( "var/main_page.html", 'w' )
     main_page.write( the_page.decode(encoding) )
     main_page.close()
 
