@@ -11,7 +11,6 @@ class ConfigurationManager:
     # The users are those with an Active state
     self.users = [x for x in self.preferences['users'] if x['active']]
     self.accounts = self.preferences['library-accounts']
-    self.resources = self.preferences['resources']
     self.session_conditions = set()
 
     # Load users

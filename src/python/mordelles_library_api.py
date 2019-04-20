@@ -49,15 +49,16 @@ class MordellesLibraryAPI:
            'password': the user's password }
   """
   def login(self, user_account):
-    # First, get once the home page to initialise the session
-    response = self.get_page( self.configuration.resources['uri-home'] )
+    if not self.configuration.get('debug.set-library-offline'):
+        # First, get once the home page to initialise the session
+        response = self.get_page( self.configuration.get('resources-mordelles.uri-home') )
 
-    # Then log in
-    auth_data = dict(user_account)
-    del auth_data['name']
-    auth_data.update({'send': 'Valider', 'referer': 'https://mediatheque.ville-mordelles.fr/'})
-    data = urllib.parse.urlencode(auth_data).encode('ascii')
-    response = self.get_page( self.configuration.resources['uri-authform'], data )
+        # Then log in
+        auth_data = dict(user_account)
+        del auth_data['name']
+        auth_data.update({'send': 'Valider', 'referer': 'https://mediatheque.ville-mordelles.fr/'})
+        data = urllib.parse.urlencode(auth_data).encode('ascii')
+        response = self.get_page( self.configuration.get('resources-mordelles.uri-authform'), data )
 
 
   """
@@ -75,24 +76,30 @@ class MordellesLibraryAPI:
             'left_days': remaining time until the book must be returned (in milliseconds) }
   """
   def analyse_loans_page(self):
-    response = self.get_page( self.configuration.resources['uri-bookslist'] )
-    the_page = response.read()
+    self.user_loans = list()
 
-    # encoding is fetch roughly
-    encoding = re.findall(r'<meta.*?charset=["\']*(.+?)["\'>]', str(the_page), flags=re.I)[0]
-    tree = etree.HTML( the_page.decode(encoding) )
+    if not self.configuration.get('debug.set-library-offline'):
+        response = self.get_page( self.configuration.get('resources-mordelles.uri-bookslist') )
+        the_page = response.read()
 
-    """ NPH WIP LOG """
-    main_page = open( "var/main_page.html", 'w' )
-    main_page.write( the_page.decode(encoding) )
-    main_page.close()
+        # encoding is fetch roughly
+        encoding = re.findall(r'<meta.*?charset=["\']*(.+?)["\'>]', str(the_page), flags=re.I)[0]
+        the_page = the_page.decode(encoding)
+
+        main_page = open( "var/main_page.html", 'w' )
+        main_page.write( the_page )
+        main_page.close()
+    else:
+        with open( "var/main_page.html", 'r' ) as main_page:
+            the_page = main_page.read()
+
+    tree = etree.HTML( the_page )
 
     # 1. Fetch the loans for each user
 #    raw_loans_list = tree.xpath( './/div[@class="group-loans-content"]/*' )
     raw_loans_list = tree.xpath(".//div[@class='group-loans-content']/div | .//div[@class='group-loans-content']/p[@class='lead']")
     logging.debug( 'RAW loans list size: {}'.format(len(raw_loans_list)))
 
-    self.user_loans = list()
     current_user = None
     dbg_error = list()
 

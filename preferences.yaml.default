@@ -26,18 +26,21 @@ library-accounts:
 
 resources:
    # The URI of the library's home page
-   uri-home:      https://mediatheque.ville-mordelles.fr/
+   uri-home:            https://mediatheque.ville-mordelles.fr/
    # The URI for posting the authentication form. This allows to authenticate the user
-   uri-authform:  https://mediatheque.ville-mordelles.fr/opac/user/login
+   uri-authform:        https://mediatheque.ville-mordelles.fr/opac/user/login
    # The URI for fetching the currently authenticated user list of loans
-   uri-bookslist: https://mediatheque.ville-mordelles.fr/opac/user/profile#loan
+   uri-bookslist:       https://mediatheque.ville-mordelles.fr/opac/user/profile#loan
 
 configuration:
    sender: Biblio Rasta <Nicolas.PepinHermann@gmail.com>
    subject: "[Bibliothèque] Emprunts à la bibliothèque de Mordelles"
    list-backup-file: loans_list.bak    # The file in which the list of current loans is saved, in order to compare it with the next check. See 'list-change' sending rule
    log-file: library_loans_mailer.log  # The log file name
-   smtp-server: smtp.provider.net      
-   smtp-login: edmon@provider.net      
-   smtp-password: m!k4d05?35           
+   smtp-server: smtp.provider.net
+   smtp-login: edmon@provider.net
+   smtp-password: m!k4d05?35
 
+debug:
+   # When offline, the library page is not fetched but loaded from previouly stored cache (useful for debbuging)
+   set-library-offline: False
