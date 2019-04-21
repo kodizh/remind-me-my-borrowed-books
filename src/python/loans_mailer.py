@@ -54,11 +54,12 @@ class LoansMailer:
   """
   def fetch_loans_list(self):
     for user_account in self.config.accounts:
-        self.library_api.login(user_account)
-        user_loans = self.library_api.analyse_loans_page()
+        self.library_api.load_page(user_account)
+        user_loans = list(self.library_api.get_loans())
         self.loans.extend( user_loans )
 
     # sort the list by ascending remaining days
+    # NPH NOTE: sorting the loans was required when dealing with a static pickle object to compare changes with the previous sync
     self.loans = sorted( self.loans, key=itemgetter('left_days') )
 
 

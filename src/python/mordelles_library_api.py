@@ -48,17 +48,54 @@ class MordellesLibraryAPI:
            'username': the username (login id) of the user,
            'password': the user's password }
   """
-  def login(self, user_account):
-    if not self.configuration.get('debug.set-library-offline'):
-        # First, get once the home page to initialise the session
-        response = self.get_page( self.configuration.get('resources-mordelles.uri-home') )
+  def load_page(self, user_account):
+    if self.configuration.get('debug.set-library-offline'):
+      with open( "var/main_page.html", 'r' ) as main_page:
+        self.the_page = main_page.read()
 
-        # Then log in
-        auth_data = dict(user_account)
-        del auth_data['name']
-        auth_data.update({'send': 'Valider', 'referer': 'https://mediatheque.ville-mordelles.fr/'})
-        data = urllib.parse.urlencode(auth_data).encode('ascii')
-        response = self.get_page( self.configuration.get('resources-mordelles.uri-authform'), data )
+    else:
+      # First, get once the home page to initialise the session
+      response = self.get_page( self.configuration.get('resources-mordelles.uri-home') )
+
+      # Then log in
+      auth_data = dict(user_account)
+      del auth_data['name']
+      auth_data.update({'send': 'Valider', 'referer': 'https://mediatheque.ville-mordelles.fr/'})
+      data = urllib.parse.urlencode(auth_data).encode('ascii')
+      response = self.get_page( self.configuration.get('resources-mordelles.uri-authform'), data )
+
+      response = self.get_page( self.configuration.get('resources-mordelles.uri-bookslist') )
+      the_page = response.read()
+
+      # encoding is fetch roughly
+      encoding = re.findall(r'<meta.*?charset=["\']*(.+?)["\'>]', str(the_page), flags=re.I)[0]
+      self.the_page = the_page.decode(encoding)
+
+      with open( "var/main_page.html", 'w' ) as main_page:
+        main_page.write( self.the_page )
+        main_page.close()
+
+
+  def get_field(self, loan_as_html, field_data):
+    field_name = field_data[0]
+    xpath_expr = field_data[1]
+    try:
+      value = " ".join(loan_as_html.xpath(xpath_expr))
+      if len(field_data) == 3:
+        value = field_data[2](value)
+      return { field_name : value }
+    except:
+      self.dbg_error.append(field_name)
+      return { field_name : "Error" }
+
+
+  def format_date(self, date_string):
+    date_string = re.search('[0-9]+-[0-9]+-[0-9]+', date_string).group(0)
+    return dt.datetime.strptime(date_string, '%d-%m-%Y') + dt.timedelta(hours=20)
+
+
+  def format_book_id(self,book_url):
+    return book_url.split('=')[1]
 
 
   """
@@ -68,6 +105,8 @@ class MordellesLibraryAPI:
          method for detailed description
   \return a list of all this user's loans. A loan is a dictionary with the following entries:
           { 'owner': the name of the user that owns the loan,
+            'id': the unique ID identifying the book in the library,
+            'isbn': the ISBN identifier of the book,
             'title': the title of the book,
             'author': the author of the book,
             'library': the library name,
@@ -75,85 +114,44 @@ class MordellesLibraryAPI:
             'information': additional information on the book,
             'left_days': remaining time until the book must be returned (in milliseconds) }
   """
-  def analyse_loans_page(self):
-    self.user_loans = list()
+  def get_loans(self):
+    tree = etree.HTML( self.the_page )
 
-    if not self.configuration.get('debug.set-library-offline'):
-        response = self.get_page( self.configuration.get('resources-mordelles.uri-bookslist') )
-        the_page = response.read()
-
-        # encoding is fetch roughly
-        encoding = re.findall(r'<meta.*?charset=["\']*(.+?)["\'>]', str(the_page), flags=re.I)[0]
-        the_page = the_page.decode(encoding)
-
-        main_page = open( "var/main_page.html", 'w' )
-        main_page.write( the_page )
-        main_page.close()
-    else:
-        with open( "var/main_page.html", 'r' ) as main_page:
-            the_page = main_page.read()
-
-    tree = etree.HTML( the_page )
-
-    # 1. Fetch the loans for each user
-#    raw_loans_list = tree.xpath( './/div[@class="group-loans-content"]/*' )
-    raw_loans_list = tree.xpath(".//div[@class='group-loans-content']/div | .//div[@class='group-loans-content']/p[@class='lead']")
+    raw_loans_list = tree.xpath(".//div[@class='group-loans-content']/*")
     logging.debug( 'RAW loans list size: {}'.format(len(raw_loans_list)))
 
     current_user = None
-    dbg_error = list()
 
     for raw_loan in raw_loans_list:
+      self.dbg_error = list()
+
       if len( raw_loan.xpath( './/i[@class="fa fa-user"]' )) > 0:
         current_user = raw_loan.xpath( './/text()' )[1].strip().split(' ')[1]
         logging.debug( 'Process loans for user {}'.format(current_user) )
         continue
 
-      title = "Not set"
-      try:
-        title = " ".join(raw_loan.xpath('.//div[@class="loan-img hidden-xs hidden-sm"]/@data-title'))
-      except:
-        title = "Error"
-        dbg_error.append('title')
+      fields_list= [
+        [ 'id', './/div[@class="loan-book"]//a/@href', self.format_book_id ],
+        [ 'isbn', './/div[@class="loan-img hidden-xs hidden-sm"]/@data-ean' ],
+        [ 'title', './/div[@class="loan-img hidden-xs hidden-sm"]/@data-title' ],
+        [ 'author', './/div[@class="loan-img hidden-xs hidden-sm"]/@data-author' ],
+        [ 'library', './/div[@class="loan-info"]/p[1]/b/text()' ],
+        [ 'loan_date', './/div[@class="loan-info"]/p[1]/text()', self.format_date ],
+        [ 'return_date', './/div[@class="loan-info"]/p[2]/text()', self.format_date ]
+      ]
 
-      author = "Not set"
-      try:
-        author = " ".join(raw_loan.xpath('.//div[@class="loan-img hidden-xs hidden-sm"]/@data-author'))
-      except:
-        author = "Error"
-        dbg_error.append('author')
+      entry = dict()
+      for field in fields_list:
+        entry.update( self.get_field( raw_loan, field ))
+      entry.update({ 'owner' : current_user })
 
-      library = "Not set"
-      try:
-        library = " ".join(raw_loan.xpath('.//div[@class="loan-info"]/p[1]/b/text()'))
-      except:
-        library = "Error"
-        dbg_error.append('library')
+      if len(self.dbg_error) > 0 :
+        logging.debug( 'An error was raised while analysing fields: {}\nwhile processing loans {}'.format(self.dbg_error, entry) )
 
-      return_date = "Not set"
-      try:
-        return_date = dt.datetime.strptime(" ".join(raw_loan.xpath('.//div[@class="loan-info"]/p[2]/text()')), 'Retour prévu le %d-%m-%Y') + dt.timedelta(hours=20)
-      except:
-        return_date = "Error"
-        dbg_error.append('return_date')
-
-      entry = dict({
-        'owner' : current_user,
-        'title' : title,
-        'author' : author,
-        'library' : library,
-        'return_date' : return_date,
-      })
-
-      if len(dbg_error) > 0 :
-        logging.debug( 'An error was raised while analysing fields: {}\nwhile processing loans {}'.format(dbg_error, entry) )
-
-      if return_date != "Error":
+      if entry['return_date'] != "Error":
         entry['left_days'] = entry['return_date'] - dt.datetime.now()
       else:
         entry['left_days'] = dt.datetime.now() - dt.datetime.now()
       self.configuration.registerCondition( 'due-date', entry['left_days'].days )
 
-      self.user_loans.append(entry)
-
-    return self.user_loans
+      yield entry
