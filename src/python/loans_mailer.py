@@ -12,7 +12,6 @@ import datetime as dt
 import locale
 from operator import itemgetter, attrgetter, methodcaller
 from collections import OrderedDict
-import pickle
 
 import sys
 import os
@@ -49,52 +48,6 @@ class LoansMailer:
     pass
 
 
-  """ for each library user account, connect to the library's website, fetch the loans and add
-      them to the general list
-  """
-  def fetch_loans_list(self):
-    for user_account in self.config.accounts:
-        self.library_api.load_page(user_account)
-        user_loans = list(self.library_api.get_loans())
-        self.loans.extend( user_loans )
-
-    # sort the list by ascending remaining days
-    # NPH NOTE: sorting the loans was required when dealing with a static pickle object to compare changes with the previous sync
-    self.loans = sorted( self.loans, key=itemgetter('left_days') )
-
-
-  """ The loans list is saved for backup. Then, at the next run, the backup list is compared with the fresh
-      one in order to find out if the loans list has changed (i.e. new books were borrowed or books were
-      brought back. The whole backup is compare as is, with no specific matches.
-  """
-  def backup_loans_list(self):
-    # The 'left_days' field is removed from the backup because it changes every day, and the lists would never match.
-    bakloans = [dict(x) for x in self.loans]
-    for loan in bakloans:
-      del loan['left_days']
-
-    # Compare the backup list and the fresh list
-    try:
-      fbackup = open( self.config.get('configuration.list-backup-file'), 'rb')
-    except IOError as ioe:
-      logging.warning( "Error loading list backup. Considering the list has changed.\n\t{}".format(ioe) )
-      self.config.registerCondition( 'list-change', True )
-    else:
-      content = pickle.load(fbackup)
-      if bakloans != content:
-        self.config.registerCondition( 'list-change', True )
-      fbackup.close()
-
-    # Write the fresh list as the new backup list
-    try:
-      fbackup = open( self.config.get('configuration.list-backup-file'), 'wb' )
-    except IOError as ioe:
-      logging.warning( "Unable to write the new backup list\n\t{}".format(ioe) )
-    else:
-      pickle.dump(bakloans, fbackup, pickle.HIGHEST_PROTOCOL)
-      fbackup.close()
-
-
   """ For each user (message recipient), we write a specific email. The message is created in pure XML
       using the Xtemplate library, and then transformed into GMail compatible HTML and into PlainText
       using XSL stylesheets.
@@ -102,7 +55,6 @@ class LoansMailer:
   """
   def generate_loans_list(self):
     content_root = None
-
     days_left = None
 
     if len(self.loans) == 0:
@@ -220,12 +172,20 @@ class LoansMailer:
     except Exception as e:
       logging.info( "An exception occurred while sending mail to {}\nException: ({}, {}, {})".format( recipient[0], e.args, e.errno, e.strerror ))
 
-#self.locale.setlocale( locale.LC_TIME, locale_system )
-
   def run(self):
     try:
-      self.fetch_loans_list()
-      self.backup_loans_list()
+      for user_account in self.config.accounts:
+        self.library_api.load_page(user_account)
+        for loan in self.library_api.get_loans():
+          has_changed = self.data_manager.add_loan(loan)
+          self.config.registerCondition('list-change', has_changed)
+          self.loans.append(loan)
+
+      print( "Conditions: {}".format( self.config.session_conditions))
+
+      # Sort by days left in order to have the entries appear in that order
+      # before return then generated the data-based XML document
+      self.loans = sorted( self.loans, key=itemgetter('left_days') )
       xml_document = self.generate_loans_list()
 
       for recipient in self.config.getRecipients():
@@ -240,7 +200,7 @@ class LoansMailer:
       xml_message = self.formatter.getroot(error)
 
       # Add the current content of the data structure built from the library web page
-      print( "Current loans list content:\n{}".format( self.library_api.user_loans ))
+      print( "Current loans list content:\n{}".format( self.data_manager.new_list ))
 
       # Send the message to users who have the role 'admin'
       for admin_recipient in self.config.getAdmins():

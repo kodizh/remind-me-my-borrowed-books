@@ -14,17 +14,7 @@ class DataManagerPlyvel(DataInterface):
     def __exit__(self, exc_type, exc_value, traceback):
         self.db.close()
 
-    def write_book(self, book_data):
-        db.put(book_data['book_id'], json.dumps(book_data))
-
-    def write_loan(self, loan_data):
-        db.put(loan_data['loan_id'], json.dumps(loan_data))
-        # NPH WIP # Do we need extra indexes for facilitating querying the base?
-
-    def lookup_book(self, book_id):
-        pass
-
-    def lookup_loans_by_dates(self, date_range):
+    def add_loan(self):
         pass
 
     def run_tests(self, python_object):

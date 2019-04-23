@@ -3,6 +3,7 @@
 
 
 from lxml import etree
+import logging
 
 """
 The general philosophy is to provide the XML fragment to update, and then get it back.
@@ -50,7 +51,7 @@ class Xtemplate:
     new_elements.append(new_element)
 
     if base_element == None:
-      print( "No matching location found." )
+      logging.warning( "No matching base location found for entry '{}'. Sought location: '{}'".format(new_element, base_location) )
       base_element = etree.Element( new_elements.pop(0) )
 
     # and then start creating the new elements

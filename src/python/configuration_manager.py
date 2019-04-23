@@ -66,6 +66,11 @@ class ConfigurationManager:
   \param value the value of the rule
   """
   def registerCondition(self, key, value ):
+    # Deleting the existing entry for 'updated' entries, i.e. entries for which
+    # the value parameter is exclusive. 'list-change' is currently the only one. 
+    if key == 'list-change' and (key, not value) in self.session_conditions:
+      self.session_conditions.remove( (key, not value) )
+
     self.session_conditions.add( (key, value) )
 
 

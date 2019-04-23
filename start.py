@@ -16,6 +16,7 @@ sys.path.append(Install_Directory +'/src/python')
 # remind-me's libraries imports
 from configuration_manager import ConfigurationManager
 from data_manager_plyvel import DataManagerPlyvel
+from data_manager_pickle import DataManagerPickle
 from mordelles_library_api import MordellesLibraryAPI
 from xtemplate import Xtemplate
 from loans_mailer import LoansMailer
@@ -24,7 +25,7 @@ from loans_mailer import LoansMailer
 if __name__ == "__main__":
 
     with ConfigurationManager(Install_Directory + '/preferences.yaml') as cm, \
-        DataManagerPlyvel(cm) as dm,                                          \
+        DataManagerPickle(cm) as dm,                                          \
         MordellesLibraryAPI(cm) as lib_api,                                   \
         Xtemplate() as formatter,                                             \
         LoansMailer(cm, dm, lib_api, formatter) as mailer:
