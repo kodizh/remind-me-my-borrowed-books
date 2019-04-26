@@ -1,5 +1,6 @@
 from data_interface import DataInterface
 import pickle
+import logging
 
 """
   With DataManagerPickle, the loans are aggragated into a ordinary Python list,
@@ -18,14 +19,18 @@ class DataManagerPickle(DataInterface):
 
 
   def __enter__(self):
-    print( "Trying to open {}".format(self.backup_file))
-    with open(self.backup_file , 'rb') as fbackup:
-      self.existing_list = pickle.load(fbackup)
+    logging.info( "Opening Pickle file {}".format(self.backup_file))
+    try:
+      with open(self.backup_file , 'rb') as fbackup:
+        self.existing_list = pickle.load(fbackup)
+    except FileNotFoundError:
+      logging.warning("Pickle file does not exists. Using empty list.")
+      self.existing_list = list()
     return self
 
 
   def __exit__(self, exc_type, exc_value, traceback):
-    with open(self.backup_file , 'wb') as fbackup:
+    with open(self.backup_file , 'wb+') as fbackup:
       pickle.dump(self.new_list, fbackup, pickle.HIGHEST_PROTOCOL)
 
 
