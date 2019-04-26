@@ -157,7 +157,7 @@ class LoansMailer:
     """ Convert the XML message to HTML and PlainText and send it to the recipient """
     msg = MIMEMultipart('alternative')
     msg['Subject'] = self.config.get( "configuration.subject" )
-    msg['From'] = "Biblio Rasta <{}>".format( recipient[0] )
+    msg['From'] = self.config.get( "configuration.sender" )
     msg['To'] = recipient[0]
     msg.attach( MIMEText( etree.tostring( self.formatter.transform( xml_document, 'src/formatting/to_html.xsl' ), pretty_print=True, encoding='unicode' ), 'html' ))
     msg.attach( MIMEText( str( self.formatter.transform( xml_document, 'src/formatting/to_plaintext.xsl' )), 'text' ))
