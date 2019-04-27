@@ -30,6 +30,10 @@ class DataManagerPickle(DataInterface):
 
 
   def __exit__(self, exc_type, exc_value, traceback):
+    # the list is not saved if it is empty
+    if not self.new_list:
+        return
+
     with open(self.backup_file , 'wb+') as fbackup:
       pickle.dump(self.new_list, fbackup, pickle.HIGHEST_PROTOCOL)
 
@@ -49,11 +53,19 @@ class DataManagerPickle(DataInterface):
     self.new_list = sorted( self.new_list, key=self.get_loan_key )
 
     for i in range(0, len(self.new_list)):
-      enew = self.new_list[i]
-      eexist = self.existing_list[i]
+      el_new = self.new_list[i]
+      el_exist = self.existing_list[i]
 
-      if enew['isbn'] != eexist['isbn'] or enew['loan_date'] != eexist['loan_date']:
-        print( "False comparison\n\t{}\n\t\t** vs. **n\t{}".format(enew, eexist) )
-        return True
+      if el_new['isbn'] != el_exist['isbn'] or el_new['loan_date'] != el_exist['loan_date']:
+        print( "False comparison\n\t{}\n\t\t** vs. **n\t{}".format(el_new, el_exist) )
+        self.list_has_changed = True
 
-    return False
+    self.list_has_changed = False
+
+
+  def has_changed(self):
+      return self.list_has_changed
+
+
+  def get_current_loans(self):
+      return self.new_list

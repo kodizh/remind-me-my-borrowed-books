@@ -33,6 +33,7 @@ class LoansMailer:
     self.data_manager = data_mgr
     self.formatter = formatter
     self.loans = list()
+    self.list_has_changed =False
 
     # Set the locale to a universal value and back to french — Needs more testing!
     #self.locale_system = locale.getlocale( locale.LC_TIME )
@@ -177,15 +178,15 @@ class LoansMailer:
       for user_account in self.config.accounts:
         self.library_api.load_page(user_account)
         for loan in self.library_api.get_loans():
-          has_changed = self.data_manager.add_loan(loan)
-          self.config.registerCondition('list-change', has_changed)
-          self.loans.append(loan)
+          self.data_manager.add_loan(loan)
+
+        self.config.registerCondition('list-change', self.data_manager.has_changed())
 
       print( "Conditions: {}".format( self.config.session_conditions))
 
       # Sort by days left in order to have the entries appear in that order
       # before return then generated the data-based XML document
-      self.loans = sorted( self.loans, key=itemgetter('left_days') )
+      self.loans = sorted( self.data_manager.get_current_loans(), key=itemgetter('left_days') )
       xml_document = self.generate_loans_list()
 
       for recipient in self.config.getRecipients():
