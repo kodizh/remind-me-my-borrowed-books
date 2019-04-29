@@ -43,11 +43,9 @@ This section presents the next features that may be added soon.
 
 ## 2. Include `external_variables.xml` content in `preferences.yaml`
 
-Generate the `external_variables.xml` file at startup from the `preferences.yaml` configuration file, in order to keep all configuration in one location.
+ - Generate the `external_variables.xml` file at startup from the `preferences.yaml` configuration file, in order to keep all configuration in one location.
 
-The tricky part lies in simply matching the username extracted from the library, and the user's name used for defining the colour.
-
-**\#Idea**: add unknown users to the preference file with a random colour. The user can change the colour afterwards if she or he wants to.
+ - Add users that are listed in the library page but not in the preference file to the preference file; assign them with a random colour (the user can change the colour afterwards if she or he wants to).
 
 Note: *the `external_variables.xml` file is the configuration file used by the XSL parser, while the `preferences.yaml` file is the configuration file used by the Python program.*
 
@@ -68,3 +66,14 @@ This will allow a long term management of the data like
  - Read the available reservations in the library page
  - Add the data in custom fields in the xml
  - Render the custom fields with the XSL for displaying in the email
+
+## 6. Automate loans prolongation when possible
+
+ - Automate the prolongation to avoid forgetting it
+ - Define rules to define when a loan can be updated to optimise the prolongation period
+
+## 7. Improve the rules mechanism to allow more complex rules
+
+ - Mainly concerns the sending rules to allow an `AND` operator
+ - Find out if any Python library does the job
+ 
