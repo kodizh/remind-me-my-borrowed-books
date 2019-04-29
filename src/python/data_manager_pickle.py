@@ -16,6 +16,7 @@ class DataManagerPickle(DataInterface):
     self.configuration_manager = config_mgr
     self.backup_file = self.configuration_manager.get('configuration.list-backup-file')
     self.new_list = list()
+    self.list_has_changed = False
 
 
   def __enter__(self):
