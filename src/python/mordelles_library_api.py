@@ -8,6 +8,7 @@ from lxml import etree
 import datetime as dt
 import logging
 import os
+from glob import glob
 from pathlib import Path
 import time
 
@@ -61,15 +62,19 @@ class MordellesLibraryAPI:
     if reset:
       for file in Path(dump_dir).glob(filename +"*.html"):
         file.unlink()
-      self.dump_order = 1
 
     if plaintext_page:
-      file = dump_dir +'/'+ filename +'_'+ str(self.dump_order) +".html"
+      last_file = sorted(glob(dump_dir +"/"+ filename +"*.html"))[-1:]
+      if last_file:
+        file_index = int( re.search('[0-9]+', last_file[0]).group(0) )
+      else:
+        file_index = 0
+
+      file = dump_dir +'/'+ filename +'_'+ str(file_index+1) +".html"
       with open( file, "w+" ) as dump_file:
         dump_file.write( plaintext_page )
         dump_file.close()
       logging.info( "Dumped page to {}".format(file) )
-      self.dump_order = self.dump_order + 1
 
 
   """
@@ -82,7 +87,7 @@ class MordellesLibraryAPI:
   """
   def load_page(self, user_account):
     if self.configuration.get('debug.set-library-offline'):
-      with open( "var/main_page.html", 'r' ) as main_page:
+      with open( "var/loans_page_1.html", 'r' ) as main_page:
         plaintext_page = main_page.read()
         self.page_tree = etree.HTML( plaintext_page )
       return
@@ -122,6 +127,7 @@ class MordellesLibraryAPI:
         time.sleep(1)
         continue
       else:
+        self.dump_page(plaintext_page, 'loans_page', True)
         break
 
 
