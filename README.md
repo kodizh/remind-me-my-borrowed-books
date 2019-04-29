@@ -35,11 +35,11 @@ The configuration file is organised into 4 sections:
 
 This section presents the next features that may be added soon.
 
-## 1. HTML parsing failures
+## 1. ~~HTML parsing failures~~ (Done)
 
-Detect when parsing the libraries CMS webpages fails. Then:
- - add a retry mechanism,
- - log every page that failed for later analysis
+~~Detect when parsing the libraries CMS webpages fails. Then:~~
+ - ~~add a retry mechanism,~~
+ - ~~log every page that failed for later analysis~~
 
 ## 2. Include `external_variables.xml` content in `preferences.yaml`
 
