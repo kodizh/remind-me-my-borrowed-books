@@ -29,6 +29,42 @@ The configuration file is organised into 4 sections:
   - the `resources` section allows to configures the resources related to the library, that is the required URI for authenticating and querying the list of loans.
   - The `configuration` section provides additional configuration for the program itself.
 
-
 [yaml]: <http://yaml.org/>
 
+# Mini-roadmap
+
+This section presents the next features that may be added soon.
+
+## 1. HTML parsing failures
+
+Detect when parsing the libraries CMS webpages fails. Then:
+ - add a retry mechanism,
+ - log every page that failed for later analysis
+
+## 2. Include `external_variables.xml` content in `preferences.yaml`
+
+Generate the `external_variables.xml` file at startup from the `preferences.yaml` configuration file, in order to keep all configuration in one location.
+
+The tricky part lies in simply matching the username extracted from the library, and the user's name used for defining the colour.
+
+**\#Idea**: add unknown users to the preference file with a random colour. The user can change the colour afterwards if she or he wants to.
+
+Note: *the `external_variables.xml` file is the configuration file used by the XSL parser, while the `preferences.yaml` file is the configuration file used by the Python program.*
+
+## 3. LevelDB
+
+Make the DataManager based on LevelDB functional.
+
+This will allow a long term management of the data like
+ - managing an history,
+ - useful statistics.
+
+## 4. Manual loans using a barcode scanner
+
+ Add a new module that can interact with a barcode scanner for both libraries that don't have an online management system, and possibly for personal loans.
+
+## 5. Add other fields to the message
+
+ - Read the available reservations in the library page
+ - Add the data in custom fields in the xml
+ - Render the custom fields with the XSL for displaying in the email
