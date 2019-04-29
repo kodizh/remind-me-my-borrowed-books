@@ -8,6 +8,8 @@ from lxml import etree
 import datetime as dt
 import logging
 import os
+from pathlib import Path
+import time
 
 class MordellesLibraryAPI:
   def __init__(self, config):
@@ -40,41 +42,6 @@ class MordellesLibraryAPI:
 
     return response
 
-  """
-  Login into the website of the library, provided his credentials. Then stores the cookie in order
-  to fetch further pages.
-  \param the configuration related to the user. A library account is a dictionary with the following fields:
-         { 'name': the name of the user,
-           'username': the username (login id) of the user,
-           'password': the user's password }
-  """
-  def load_page(self, user_account):
-    if self.configuration.get('debug.set-library-offline'):
-      with open( "var/main_page.html", 'r' ) as main_page:
-        self.the_page = main_page.read()
-
-    else:
-      # First, get once the home page to initialise the session
-      response = self.get_page( self.configuration.get('resources-mordelles.uri-home') )
-
-      # Then log in
-      auth_data = dict(user_account)
-      del auth_data['name']
-      auth_data.update({'send': 'Valider', 'referer': 'https://mediatheque.ville-mordelles.fr/'})
-      data = urllib.parse.urlencode(auth_data).encode('ascii')
-      response = self.get_page( self.configuration.get('resources-mordelles.uri-authform'), data )
-
-      response = self.get_page( self.configuration.get('resources-mordelles.uri-bookslist') )
-      the_page = response.read()
-
-      # encoding is fetch roughly
-      encoding = re.findall(r'<meta.*?charset=["\']*(.+?)["\'>]', str(the_page), flags=re.I)[0]
-      self.the_page = the_page.decode(encoding)
-
-      with open( "var/main_page.html", 'w' ) as main_page:
-        main_page.write( self.the_page )
-        main_page.close()
-
 
   def get_field(self, loan_as_html, field_data):
     field_name = field_data[0]
@@ -87,6 +54,75 @@ class MordellesLibraryAPI:
     except:
       self.dbg_error.append(field_name)
       return { field_name : "Error" }
+
+
+  def dump_page(self, plaintext_page, filename, reset=False):
+    dump_dir = self.configuration.get('configuration.log-directory')
+    if reset:
+      for file in Path(dump_dir).glob(filename +"*.html"):
+        file.unlink()
+      self.dump_order = 1
+
+    if plaintext_page:
+      file = dump_dir +'/'+ filename +'_'+ str(self.dump_order) +".html"
+      with open( file, "w+" ) as dump_file:
+        dump_file.write( plaintext_page )
+        dump_file.close()
+      logging.info( "Dumped page to {}".format(file) )
+      self.dump_order = self.dump_order + 1
+
+
+  """
+  Login into the website of the library, provided his credentials. Then stores the cookie in order
+  to fetch further pages.
+  \param the configuration related to the user. A library account is a dictionary with the following fields:
+         { 'name': the name of the user,
+           'username': the username (login id) of the user,
+           'password': the user's password }
+  """
+  def load_page(self, user_account):
+    if self.configuration.get('debug.set-library-offline'):
+      with open( "var/main_page.html", 'r' ) as main_page:
+        plaintext_page = main_page.read()
+        self.page_tree = etree.HTML( plaintext_page )
+      return
+
+    self.dump_page(None, 'main_page', True)
+
+    while True:
+      # First, get once the home page to initialise the session
+      response = self.get_page( self.configuration.get('resources-mordelles.uri-home') )
+      # encoding is fetch roughly
+      encoding = re.findall(r'<meta.*?charset=["\']*(.+?)["\'>]', str(response.read()), flags=re.I)[0]
+
+      self.dump_page(response.read().decode(encoding), 'main_page')
+
+      time.sleep(1)
+
+      # Then log in
+      auth_data = dict(user_account)
+      del auth_data['name']
+      auth_data.update({'send': 'Valider', 'referer': 'https://mediatheque.ville-mordelles.fr/'})
+      data = urllib.parse.urlencode(auth_data).encode('ascii')
+      response = self.get_page( self.configuration.get('resources-mordelles.uri-authform'), data )
+      self.dump_page(response.read().decode(encoding), 'main_page')
+
+      time.sleep(1)
+
+      response = self.get_page( self.configuration.get('resources-mordelles.uri-bookslist') )
+      plaintext_page = response.read().decode(encoding)
+      self.dump_page(plaintext_page, 'main_page')
+
+      self.page_tree = etree.HTML( plaintext_page )
+
+      # test if the page contains a loans list
+      is_loan_page = self.page_tree.xpath( ".//div[contains(@class, 'catalog-page')]" )
+      if not is_loan_page:
+        logging.error("The loaded page is not a catalog page. Retrying...")
+        time.sleep(1)
+        continue
+      else:
+        break
 
 
   def format_date(self, date_string):
@@ -115,9 +151,7 @@ class MordellesLibraryAPI:
             'left_days': remaining time until the book must be returned (in milliseconds) }
   """
   def get_loans(self):
-    tree = etree.HTML( self.the_page )
-
-    raw_loans_list = tree.xpath(".//div[@class='group-loans-content']/*")
+    raw_loans_list = self.page_tree.xpath(".//div[@class='group-loans-content']/*")
     logging.debug( 'RAW loans list size: {}'.format(len(raw_loans_list)))
 
     current_user = None
