@@ -41,9 +41,9 @@ This section presents the next features that may be added soon.
  - ~~add a retry mechanism,~~
  - ~~log every page that failed for later analysis~~
 
-## 2. Include `external_variables.xml` content in `preferences.yaml`
+## 2. ~~Include `external_variables.xml` content in `preferences.yaml`~~ (Partial)
 
- - Generate the `external_variables.xml` file at startup from the `preferences.yaml` configuration file, in order to keep all configuration in one location.
+ - ~~Generate the `external_variables.xml` file at startup from the `preferences.yaml` configuration file, in order to keep all configuration in one location.~~
 
  - Add users that are listed in the library page but not in the preference file to the preference file; assign them with a random colour (the user can change the colour afterwards if she or he wants to).
 
@@ -76,4 +76,3 @@ This will allow a long term management of the data like
 
  - Mainly concerns the sending rules to allow an `AND` operator
  - Find out if any Python library does the job
- 

@@ -18,6 +18,18 @@ users:
      roles: user
      active: False
 
+# Some library software allow to manage several users with one account. The following
+# section allows to display different colours depending on the user.
+library-users:
+  - name:   Alice           # The name of the user as fetch by the library API
+    colour: "#ff5050"       # The matching colour
+  - name:   Aziliz
+    colour: "#3399ff"
+  - name:   Elia
+    colour: "#e5bf90"
+  - name:   Nicolas
+    colour: "#00cc66"
+
 # The library card credentials that allows to connect the library website
 library-accounts:
    - name:     Edmon        # The name of the owner of the card
@@ -33,13 +45,13 @@ resources:
    uri-bookslist:       https://mediatheque.ville-mordelles.fr/opac/user/profile#loan
 
 configuration:
-   sender: Biblio Rasta <Nicolas.PepinHermann@gmail.com>
-   subject: "[Bibliothèque] Emprunts à la bibliothèque de Mordelles"
+   sender: Books reminder <Edmon-at-Home@provider.net>  # The email address to display as the sender of the reminder
+   subject: "[Bibliothèque] Emprunts à la bibliothèque de Mordelles" # The email object
    list-backup-file: loans_list.bak    # The file in which the list of current loans is saved, in order to compare it with the next check. See 'list-change' sending rule
    log-file: library_loans_mailer.log  # The log file name
-   smtp-server: smtp.provider.net
-   smtp-login: edmon@provider.net
-   smtp-password: m!k4d05?35
+   smtp-server: smtp.provider.net      # The address of the SMTP server used for sending the email
+   smtp-login: Edmon-at-Home@provider.net # The login used for authenticating on the SMTP server.
+   smtp-password: m!k4d05?76           # The password for authenticating on the SMTP server
 
 debug:
    # When offline, the library page is not fetched but loaded from previouly stored cache (useful for debbuging)

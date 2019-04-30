@@ -1,4 +1,6 @@
 from yaml import load, SafeLoader
+from xtemplate import Xtemplate
+from lxml import etree
 import os
 import sys
 import logging
@@ -12,6 +14,8 @@ class ConfigurationManager:
     self.users = [x for x in self.preferences['users'] if x['active']]
     self.accounts = self.preferences['library-accounts']
     self.session_conditions = set()
+    # Update the XSL configuration file
+    self.update_xsl_formatter_config_file("src/formatting/external_variables.xml")
 
     # Load users
     for user in self.users:
@@ -67,7 +71,7 @@ class ConfigurationManager:
   """
   def registerCondition(self, key, value ):
     # Deleting the existing entry for 'updated' entries, i.e. entries for which
-    # the value parameter is exclusive. 'list-change' is currently the only one. 
+    # the value parameter is exclusive. 'list-change' is currently the only one.
     if key == 'list-change' and (key, not value) in self.session_conditions:
       self.session_conditions.remove( (key, not value) )
 
@@ -144,3 +148,14 @@ class ConfigurationManager:
         logging.info( "Added admin recipient: {} <{}>".format( user['name'], user['mail'] ))
         recipients_list.append( (user['mail'], None ))
     return recipients_list
+
+
+  def update_xsl_formatter_config_file(self, filepath):
+    formatter = Xtemplate()
+    content_root = None
+    for user in self.preferences.get('library-users'):
+      col = formatter.new_value( content_root, '/external-variables/owner-colour-list/col', user['colour'] )
+      formatter.set_value( col, './@owner', user['name'] )
+      content_root = formatter.getroot(col)
+    with open( filepath, 'wb+' ) as ext_variables:
+      etree.ElementTree(content_root).write(ext_variables)
