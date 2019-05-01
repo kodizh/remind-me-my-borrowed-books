@@ -53,13 +53,18 @@ Note: *the `external_variables.xml` file is the configuration file used by the X
 
 Make the DataManager based on LevelDB functional.
 
-This will allow a long term management of the data like
- - managing an history,
- - useful statistics.
+While the Pickle based DataManager entailed to only keep the current loans, and no history, a DataManager relying on a Database will allow some longer term management of the data. The following example are considered:
+ - managing and searching the loans history,
+ - showing useful statistics as well as funny ones,
+ - easing to open the software to broader cases like manual loans registering.
 
-## 4. Manual loans using a barcode scanner
+## 4. Manual loans registering using a barcode scanner
 
  Add a new module that can interact with a barcode scanner for both libraries that don't have an online management system, and possibly for personal loans.
+
+ For this implementation, the actual scanning relies on the [Barcode & QR code Keyboard](https://play.google.com/store/apps/details?id=com.nikosoft.nikokeyboard) Android application, by Nikola Antonov. The application has the advantage of embedding the barcode scanner into an Android soft keyboard, and to be able to provide barcode decoding into any input text field.
+
+ The development consists in adding an interface between the current program and a web server on the one hand, and to develop a small webapp. The goal of the webapp is to add interaction with the user and reliability concerning the data while adding and removing loans (the reliability part is based on WebStorage/localStorage).
 
 ## 5. Add other fields to the message
 
