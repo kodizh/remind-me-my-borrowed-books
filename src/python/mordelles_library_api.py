@@ -53,6 +53,7 @@ class MordellesLibraryAPI:
         value = field_data[2](value)
       return { field_name : value }
     except:
+      logging.error("The read field is invalid. Name: {}, Xpath: {}, Found value: {}".format(field_name, xpath_expr, str_value))
       self.dbg_error.append(field_name)
       return { field_name : "Error" }
 
@@ -152,6 +153,7 @@ class MordellesLibraryAPI:
             'title': the title of the book,
             'author': the author of the book,
             'library': the library name,
+            'loan_date': the date the loan was made,
             'return_date': the return date as a Python date format,
             'information': additional information on the book,
             'left_days': remaining time until the book must be returned (in milliseconds) }
@@ -168,6 +170,10 @@ class MordellesLibraryAPI:
       if len( raw_loan.xpath( './/i[@class="fa fa-user"]' )) > 0:
         current_user = raw_loan.xpath( './/text()' )[1].strip().split(' ')[1]
         logging.debug( 'Process loans for user {}'.format(current_user) )
+        continue
+
+      if " ".join(raw_loan.xpath( './text()' )) == "Aucun prêt":
+        logging.debug("Note: no loan for user {}".format(current_user))
         continue
 
       fields_list= [
