@@ -47,7 +47,8 @@ class DataManagerPickle(DataInterface):
     self.new_list.append(loan_data)
 
     if len(self.new_list) != len(self.existing_list):
-      return True
+      self.list_has_changed = True
+      return
 
     # Sorting the loans is required when dealing with a static pickle
     # object to compare changes with the previous sync
