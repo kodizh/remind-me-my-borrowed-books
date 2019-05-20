@@ -32,8 +32,6 @@ class LoansMailer:
     self.library_api = lib_api
     self.data_manager = data_mgr
     self.formatter = formatter
-    self.loans = list()
-    self.list_has_changed =False
 
     # Set the locale to a universal value and back to french — Needs more testing!
     #self.locale_system = locale.getlocale( locale.LC_TIME )
@@ -54,15 +52,15 @@ class LoansMailer:
       using XSL stylesheets.
       Then the messages is sent to the recipient.
   """
-  def generate_loans_list(self):
+  def generate_loans_list(self, loans):
     content_root = None
     days_left = None
 
-    if len(self.loans) == 0:
+    if len(loans) == 0:
       logging.error( "No loans in list. Quitting" )
       raise Exception
 
-    for entry in self.loans:
+    for entry in loans:
       # For each change of 'remaining days', a new loan-set is created
       if days_left == None or days_left != entry['left_days'].days:
         days_left = entry['left_days'].days
@@ -85,16 +83,16 @@ class LoansMailer:
     """ Generating general statistics """
     stats = self.formatter.set_value( content_root, './stats' )
 
-    self.formatter.set_value( stats, './total', len(self.loans) )
+    self.formatter.set_value( stats, './total', len(loans) )
 
-    for owner in list(set([x['owner'] for x in self.loans])):
-      user = self.formatter.new_value( stats, './user', str(len([x for x in self.loans if x['owner'] == owner])))
+    for owner in list(set([x['owner'] for x in loans])):
+      user = self.formatter.new_value( stats, './user', str(len([x for x in loans if x['owner'] == owner])))
       self.formatter.set_value( user, './@name', owner )
 
     content_root = self.formatter.getroot(user)
 
-    for days in list(set([x['left_days'].days for x in self.loans])):
-      days_left = self.formatter.new_value( stats, './days-left', str(len([x for x in self.loans if x['left_days'].days == days])))
+    for days in list(set([x['left_days'].days for x in loans])):
+      days_left = self.formatter.new_value( stats, './days-left', str(len([x for x in loans if x['left_days'].days == days])))
       self.formatter.set_value( days_left, './@days', str(days) )
 
 
@@ -186,8 +184,8 @@ class LoansMailer:
 
       # Sort by days left in order to have the entries appear in that order
       # before return then generated the data-based XML document
-      self.loans = sorted( self.data_manager.get_current_loans(), key=itemgetter('left_days') )
-      xml_document = self.generate_loans_list()
+      loans = sorted( self.data_manager.get_current_loans(), key=itemgetter('left_days') )
+      xml_document = self.generate_loans_list(loans)
 
       for recipient in self.config.getRecipients():
         self.generate_user_rules(recipient, xml_document)
